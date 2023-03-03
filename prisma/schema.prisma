@@ -1,0 +1,40 @@
+//* node-graphql/prisma/schema.prisma
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Student {
+  id       Int     @id @default(autoincrement())
+  email    String
+  fullName String
+  dept     String?
+  enrolled Boolean @default(false)
+}
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String
+  password  String
+  email     String
+  createdAt DateTime @default(now())
+  posts     Post[]   @relation("UserPosts")
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  body      String
+  username  String
+  createdAt DateTime @default(now())
+  comments  Json
+  likes     Json
+  user      User     @relation("UserPosts", fields: [userId], references: [id])
+  userId    Int
+}
