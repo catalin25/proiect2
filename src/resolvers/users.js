@@ -67,27 +67,30 @@ const resolvers = {
       });
       return updatedStudent;
     },
-    register: async (parent, { username, email, password, confirmPassword }, context) => {
-      if (password !== confirmPassword) {
-        throw new Error('Passwords do not match');
-      }
+    register: async (parent, { username, email, password }, context) => {
+      console.log("Received registration request: ", { username, email, password });
       const hashedPassword = await bcrypt.hash(password, 10);
-      const user = await context.prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          username,
-        },
-      });
-      if (!user) {
-        throw new Error('User could not be created');
+      try {
+        const user = await context.prisma.user.create({
+          data: {
+            email,
+            password: hashedPassword,
+            username,
+          },
+        });
+        console.log("User created: ", user);
+        const token = jwt.sign({ userId: user.id }, APP_SECRET);
+        console.log("Token generated: ", token);
+        return {
+          user,
+          token,
+        };
+      } catch (error) {
+        console.log(error);
+        throw new Error('Could not create user account. Please try again later.');
       }
-      const token = jwt.sign({ userId: user.id }, APP_SECRET);
-      return {
-        user,
-        token,
-      };
-    },
+    },    
+    
     login: async (parent, { email, password }, context) => {
       const user = await context.prisma.user.findOne({
         where: {
@@ -109,4 +112,5 @@ const resolvers = {
     },
   },
 };
+
 module.exports = resolvers;
