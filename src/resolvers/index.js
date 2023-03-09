@@ -1,12 +1,8 @@
-const usersResolvers = require('./users');
-
-module.exports = {
-    Mutation: {
-        ...usersResolvers.Mutation
-    }
-};
-
-const { prisma } = require("../database");
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+const APP_SECRET = "my secret password";
 
 const Student = {
   id: (parent, args, context, info) => parent.id,
@@ -49,6 +45,44 @@ const Mutation = {
         enrolled: true,
       },
     });
+  },
+  register: async (parent, { username, email, password }, context) => {
+    console.log("Received registration request: ", { username, email, password });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("Password hashed: ", hashedPassword);
+    const user = await context.prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        username,
+      },
+    });
+    console.log("User created: ", user);
+    const token = jwt.sign({ userId: user.id }, APP_SECRET);
+    console.log("Token generated: ", token);
+    return {
+      user,
+      token,
+    };
+  },
+  login: async (parent, { email, password }, context) => {
+    const user = await context.prisma.user.findFirst({
+      where: {
+        email,
+      },
+    });
+    if (!user) {
+      throw new Error('No user found');
+    }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      throw new Error('Invalid password');
+    }
+    const token = jwt.sign({ userId: user.id }, APP_SECRET);
+    return {
+      user,
+      token,
+    };
   },
 };
 
